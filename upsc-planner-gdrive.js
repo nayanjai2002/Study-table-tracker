@@ -13,57 +13,9 @@ let gdriveUser = null;
 let gdriveToken = null;
 let gdriveClientId = null;
 
-// Fetch config from Vercel serverless function or use local config
+// Simplified: Load from localStorage or show setup
 async function loadConfig() {
-  // Try Vercel API first
-  try {
-    console.log('📡 Fetching config from /api/config...');
-    const response = await fetch('/api/config');
-    if (response.ok) {
-      const data = await response.json();
-      console.log('📦 API Response:', data);
-      if (data.GOOGLE_CLIENT_ID && data.GOOGLE_CLIENT_ID !== 'NOT_SET') {
-        gdriveClientId = data.GOOGLE_CLIENT_ID;
-        console.log('✓ Config loaded from Vercel API');
-        return true;
-      } else {
-        console.warn('⚠️ API returned NOT_SET - env var not configured on Vercel');
-      }
-    } else {
-      console.warn('⚠️ API returned status:', response.status);
-    }
-  } catch (err) {
-    // API not available (local development) - fall back to config.js
-    console.log('ℹ Vercel API not available (expected in local dev):', err.message);
-  }
-
-  // Try loading from public/config.json (manual upload to Vercel public folder)
-  try {
-    console.log('📡 Fetching config from /config.json...');
-    const response = await fetch('/config.json');
-    if (response.ok) {
-      const data = await response.json();
-      console.log('📦 JSON Response:', data);
-      if (data.GOOGLE_CLIENT_ID && data.GOOGLE_CLIENT_ID !== 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com') {
-        gdriveClientId = data.GOOGLE_CLIENT_ID;
-        console.log('✓ Config loaded from /config.json');
-        return true;
-      }
-    }
-  } catch (err) {
-    console.log('ℹ config.json not found (expected if using env var)');
-  }
-
-  // Fall back to config.js (local development)
-  if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.GOOGLE_CLIENT_ID) {
-    if (APP_CONFIG.GOOGLE_CLIENT_ID !== 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com') {
-      gdriveClientId = APP_CONFIG.GOOGLE_CLIENT_ID;
-      console.log('✓ Config loaded from config.js');
-      return true;
-    }
-  }
-
-  // Fall back to localStorage (manual entry on Vercel)
+  // Check localStorage first (already set on this device)
   const stored = localStorage.getItem('google_client_id');
   if (stored && stored.includes('apps.googleusercontent.com')) {
     gdriveClientId = stored;
@@ -71,7 +23,17 @@ async function loadConfig() {
     return true;
   }
 
-  console.warn('✗ No Client ID found in any source');
+  // Check config.js (local development)
+  if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.GOOGLE_CLIENT_ID) {
+    if (APP_CONFIG.GOOGLE_CLIENT_ID !== 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com') {
+      gdriveClientId = APP_CONFIG.GOOGLE_CLIENT_ID;
+      console.log('✓ Config loaded from config.js');
+      localStorage.setItem('google_client_id', gdriveClientId);
+      return true;
+    }
+  }
+
+  console.log('ℹ No Client ID found - setup required');
   return false;
 }
 
@@ -91,13 +53,17 @@ function loadGoogleAPI() {
 }
 
 function initGoogleAuth() {
-  // Load config first (Vercel API → config.js → localStorage)
+  // Load config first (localStorage → config.js)
   loadConfig().then(success => {
     if (!success) {
+      // No config found - show setup on button click
       setupClientIdPrompt();
+      const btn = document.getElementById('gdriveBtn');
+      if (btn) btn.textContent = '⚙️ Setup Cloud';
       return;
     }
 
+    // Config loaded - init Google OAuth
     const storedToken = localStorage.getItem('gdrive_token');
     if (storedToken) {
       gdriveToken = storedToken;
@@ -120,18 +86,96 @@ function setupClientIdPrompt() {
   const btn = document.getElementById('gdriveBtn');
   if (!btn) return;
   
-  btn.addEventListener('click', () => {
-    const clientId = prompt('📋 Google OAuth Client ID:\n\n(Get from: https://console.cloud.google.com/)\n\nPaste your Client ID:');
-    if (clientId && clientId.includes('apps.googleusercontent.com')) {
-      localStorage.setItem('google_client_id', clientId);
-      showNotif('✓ Client ID saved! Reload page to enable cloud sync.');
-      setTimeout(() => location.reload(), 1500);
-    } else if (clientId) {
-      showNotif('✗ Invalid Client ID format');
-    }
-  });
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    showSetupModal();
+  };
   
-  btn.title = 'Click to setup Google Drive sync';
+  btn.title = 'Click to setup Google Drive sync (one-time)';
+  btn.style.background = 'var(--ink3)';
+}
+
+function showSetupModal() {
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+  `;
+  
+  overlay.innerHTML = `
+    <div style="background: var(--bg); padding: 24px; border-radius: 8px; max-width: 500px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); border: 1px solid var(--border);">
+      <h3 style="margin: 0 0 12px 0; color: var(--ink);">☁️ Setup Google Drive Sync</h3>
+      <p style="color: var(--ink3); font-size: 13px; line-height: 1.6; margin: 0 0 16px 0;">
+        To enable cloud backup, paste your Google OAuth Client ID below.<br><br>
+        <strong>Get it from:</strong> <code style="background: var(--bg2); padding: 2px 6px; border-radius: 3px; font-size: 12px;">https://console.cloud.google.com/</code>
+      </p>
+      
+      <input 
+        id="clientIdInput" 
+        type="text" 
+        placeholder="Paste your Client ID here..."
+        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg2); color: var(--ink); box-sizing: border-box; font-size: 13px; margin-bottom: 16px;"
+      >
+      
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button onclick="this.closest('div').parentElement.parentElement.remove()" style="padding: 8px 16px; background: var(--ink3); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+          Cancel
+        </button>
+        <button onclick="saveClientIdSetup()" style="padding: 8px 16px; background: var(--green); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+          Save & Enable
+        </button>
+      </div>
+      
+      <div style="font-size: 11px; color: var(--ink3); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+        💡 This device only. You'll need to paste it again on other devices.
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(overlay);
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  document.getElementById('clientIdInput').focus();
+  document.getElementById('clientIdInput').onkeydown = (e) => {
+    if (e.key === 'Enter') saveClientIdSetup();
+  };
+}
+
+function saveClientIdSetup() {
+  const input = document.getElementById('clientIdInput');
+  const clientId = input?.value?.trim();
+  
+  if (!clientId) {
+    alert('Please paste your Client ID');
+    return;
+  }
+  
+  if (!clientId.includes('apps.googleusercontent.com')) {
+    alert('Invalid Client ID format. Should contain "apps.googleusercontent.com"');
+    input.focus();
+    return;
+  }
+  
+  // Save to localStorage
+  localStorage.setItem('google_client_id', clientId);
+  gdriveClientId = clientId;
+  
+  // Close modal
+  document.body.querySelector('[style*="fixed"][style*="z-index: 10001"]')?.remove();
+  
+  // Reinit Google Auth
+  showNotif('✓ Client ID saved! Initializing...');
+  setTimeout(() => {
+    initGoogleAuth();
+  }, 500);
 }
 
 function handleGoogleLogin(response) {
