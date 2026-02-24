@@ -1,11 +1,10 @@
 /* ══════════════════════════════════════════
    GOOGLE DRIVE SYNC
    ════════════════════════════════════════════
-   Add your Google Client ID below after setup
+   Client ID loaded from config.js
 */
 
-// ⚠️ REPLACE WITH YOUR GOOGLE CLIENT ID
-const GOOGLE_CLIENT_ID = '216519990483-6dngvltoq4m6l023eidd5ddcn6nh8k4g.apps.googleusercontent.com';
+// Uses APP_CONFIG.GOOGLE_CLIENT_ID from config.js
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
 let gdriveUser = null;
@@ -27,6 +26,13 @@ function loadGoogleAPI() {
 }
 
 function initGoogleAuth() {
+  // Check if config is loaded
+  if (typeof APP_CONFIG === 'undefined' || !APP_CONFIG.GOOGLE_CLIENT_ID) {
+    console.error('Config not loaded. Make sure config.js is included before gdrive.js');
+    alert('⚠️ Cloud sync not configured. Please add your Google Client ID to config.js');
+    return;
+  }
+  
   const storedToken = localStorage.getItem('gdrive_token');
   if (storedToken) {
     gdriveToken = storedToken;
@@ -37,7 +43,7 @@ function initGoogleAuth() {
   const btn = document.getElementById('gdriveBtn');
   if (btn && !gdriveUser) {
     window.google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
+      client_id: APP_CONFIG.GOOGLE_CLIENT_ID,
       callback: handleGoogleLogin,
       auto_select: false,
     });
