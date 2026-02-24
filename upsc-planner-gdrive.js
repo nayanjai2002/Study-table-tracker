@@ -1,14 +1,55 @@
 /* ══════════════════════════════════════════
    GOOGLE DRIVE SYNC
    ════════════════════════════════════════════
-   Client ID loaded from config.js
+   Client ID loaded from:
+   1. Vercel: /api/config endpoint (automatic from env vars)
+   2. Local: config.js file
+   3. Browser: localStorage (manual entry)
 */
 
-// Uses APP_CONFIG.GOOGLE_CLIENT_ID from config.js
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
 let gdriveUser = null;
 let gdriveToken = null;
+let gdriveClientId = null;
+
+// Fetch config from Vercel serverless function or use local config
+async function loadConfig() {
+  // Try Vercel API first
+  try {
+    const response = await fetch('/api/config');
+    if (response.ok) {
+      const data = await response.json();
+      if (data.GOOGLE_CLIENT_ID && data.GOOGLE_CLIENT_ID !== 'NOT_SET') {
+        gdriveClientId = data.GOOGLE_CLIENT_ID;
+        console.log('✓ Config loaded from Vercel API');
+        return true;
+      }
+    }
+  } catch (err) {
+    // API not available (local development) - fall back to config.js
+    console.log('ℹ Vercel API not available, using config.js');
+  }
+
+  // Fall back to config.js (local development)
+  if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.GOOGLE_CLIENT_ID) {
+    if (APP_CONFIG.GOOGLE_CLIENT_ID !== 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com') {
+      gdriveClientId = APP_CONFIG.GOOGLE_CLIENT_ID;
+      console.log('✓ Config loaded from config.js');
+      return true;
+    }
+  }
+
+  // Fall back to localStorage (manual entry on Vercel)
+  const stored = localStorage.getItem('google_client_id');
+  if (stored && stored.includes('apps.googleusercontent.com')) {
+    gdriveClientId = stored;
+    console.log('✓ Config loaded from localStorage');
+    return true;
+  }
+
+  return false;
+}
 
 // Load Google API library
 function loadGoogleAPI() {
@@ -26,28 +67,47 @@ function loadGoogleAPI() {
 }
 
 function initGoogleAuth() {
-  // Check if config is loaded
-  if (typeof APP_CONFIG === 'undefined' || !APP_CONFIG.GOOGLE_CLIENT_ID) {
-    console.error('Config not loaded. Make sure config.js is included before gdrive.js');
-    alert('⚠️ Cloud sync not configured. Please add your Google Client ID to config.js');
-    return;
-  }
-  
-  const storedToken = localStorage.getItem('gdrive_token');
-  if (storedToken) {
-    gdriveToken = storedToken;
-    gdriveUser = localStorage.getItem('gdrive_user');
-    updateGDriveUI();
-  }
-  
+  // Load config first (Vercel API → config.js → localStorage)
+  loadConfig().then(success => {
+    if (!success) {
+      setupClientIdPrompt();
+      return;
+    }
+
+    const storedToken = localStorage.getItem('gdrive_token');
+    if (storedToken) {
+      gdriveToken = storedToken;
+      gdriveUser = localStorage.getItem('gdrive_user');
+      updateGDriveUI();
+    }
+
+    const btn = document.getElementById('gdriveBtn');
+    if (btn && !gdriveUser && window.google?.accounts?.id) {
+      window.google.accounts.id.initialize({
+        client_id: gdriveClientId,
+        callback: handleGoogleLogin,
+        auto_select: false,
+      });
+    }
+  });
+}
+
+function setupClientIdPrompt() {
   const btn = document.getElementById('gdriveBtn');
-  if (btn && !gdriveUser) {
-    window.google.accounts.id.initialize({
-      client_id: APP_CONFIG.GOOGLE_CLIENT_ID,
-      callback: handleGoogleLogin,
-      auto_select: false,
-    });
-  }
+  if (!btn) return;
+  
+  btn.addEventListener('click', () => {
+    const clientId = prompt('📋 Google OAuth Client ID:\n\n(Get from: https://console.cloud.google.com/)\n\nPaste your Client ID:');
+    if (clientId && clientId.includes('apps.googleusercontent.com')) {
+      localStorage.setItem('google_client_id', clientId);
+      showNotif('✓ Client ID saved! Reload page to enable cloud sync.');
+      setTimeout(() => location.reload(), 1500);
+    } else if (clientId) {
+      showNotif('✗ Invalid Client ID format');
+    }
+  });
+  
+  btn.title = 'Click to setup Google Drive sync';
 }
 
 function handleGoogleLogin(response) {

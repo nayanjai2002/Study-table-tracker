@@ -29,10 +29,26 @@ npx live-server
 http://localhost:8000
 ```
 
-### Google Drive Setup (Optional)
+## Google Drive Setup
+
+### **Option 1: Automatic (Vercel - Recommended)**
+1. Deploy to Vercel (push to GitHub)
+2. Go to **Vercel Dashboard** → Your Project → **Settings**
+3. Add **Environment Variable:**
+   - **Name:** `GOOGLE_CLIENT_ID`
+   - **Value:** Your Google OAuth Client ID
+4. Redeploy (Vercel → Deployments → click latest → Redeploy)
+5. ☁️ Cloud sync will work automatically! 🎉
+
+### **Option 2: Local Development**
 1. Copy `config.example.js` → `config.js`
-2. Add your Google OAuth Client ID to `config.js`
-3. Cloud backup button (☁️) will appear in header
+2. Add your Client ID to `config.js`
+3. Run locally on `localhost:8000`
+
+### **Option 3: Manual (Fallback)**
+- If automatic fails, click ☁️ Cloud button
+- Paste Client ID when prompted
+- Saves to browser for that device
 
 ### Deploy to Vercel
 ```bash
