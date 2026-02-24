@@ -84,6 +84,7 @@ input, textarea, select { font-family: var(--font); }
   padding: 0 16px;
   display: flex; align-items: center; gap: 10px;
   height: 52px;
+  min-height: 52px;
 }
 .logo {
   font-size: 17px; font-weight: 700;
@@ -116,7 +117,77 @@ input, textarea, select { font-family: var(--font); }
 }
 .tab:active { transform: scale(.97); }
 
-.hdr-btns { display: flex; gap: 6px; }
+.hdr-btns { 
+  display: flex; 
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 0;
+  align-items: center;
+}
+
+/* Hamburger menu button */
+.hbtn-menu {
+  display: flex;
+  height: 34px;
+  width: 34px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: 18px;
+  color: var(--ink2);
+  cursor: pointer;
+  transition: all .18s;
+  align-items: center;
+  justify-content: center;
+}
+.hbtn-menu:hover { background: var(--bg2); }
+.hbtn-menu:active { transform: scale(.96); }
+
+/* Header dropdown menu */
+.header-menu {
+  display: none;
+  position: absolute;
+  top: 52px;
+  right: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--sh2);
+  z-index: 150;
+  min-width: 160px;
+  overflow: hidden;
+  animation: slideDown .15s ease-out;
+}
+.header-menu.active { display: flex; flex-direction: column; }
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.menu-item {
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  color: var(--ink2);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.menu-item:hover { background: var(--bg2); color: var(--ink); }
+.menu-item:active { background: var(--bg2); }
+.menu-item.danger { color: var(--red); }
+.menu-item.danger:hover { background: #d94f3d15; }
 .hbtn {
   height: 34px; padding: 0 12px;
   border: 1px solid var(--border);
@@ -913,10 +984,17 @@ input, textarea, select { font-family: var(--font); }
   .logo { font-size: 15px; }
 }
 
-/* Mobile phones: up to 480px */
-@media (max-width: 480px) {
+/* Mobile phones: 480–600px */
+@media (max-width: 600px) {
   .app { padding: 10px; }
-  .header-inner { padding: 0 12px; }
+  .header { position: relative; }
+  .header-inner { padding: 0 12px; gap: 6px; }
+  
+  /* Hide buttons, show hamburger on mobile */
+  .hbtn#themeBtn { display: none; }
+  .hbtn#resetBtn { display: none; }
+  .hbtn-menu { display: flex; }
+  
   .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .stat-card { padding: 11px 13px; }
   .stat-value { font-size: 20px; }
@@ -924,6 +1002,7 @@ input, textarea, select { font-family: var(--font); }
   .tabs { gap: 1px; }
   .tab { padding: 4px 7px; font-size: 11px; }
   .logo { font-size: 14px; }
+  .hdr-btns { gap: 4px; }
   .hbtn { padding: 0 8px; font-size: 12px; height: 30px; }
   .day-dots { gap: 3px; }
   .dot { width: 24px; height: 24px; font-size: 10px; border-radius: 5px; }
@@ -942,13 +1021,26 @@ input, textarea, select { font-family: var(--font); }
   .ic-btn { width: 26px; height: 26px; font-size: 11px; }
   .mini-ring { width: 32px; height: 32px; }
   .mini-ring .mr-svg { width: 32px; height: 32px; }
+  .header-menu { right: 12px; }
+}
+
+/* Small mobile: 360–480px */
+@media (max-width: 480px) {
+  .header-inner { height: 48px; }
+  .logo { font-size: 13px; }
+  .hdr-btns { gap: 3px; }
+  .hbtn { padding: 0 6px; height: 28px; font-size: 11px; }
+  .hbtn-menu { width: 32px; height: 32px; }
+  .stat-value { font-size: 18px; }
 }
 
 /* Very small: 360px and below */
 @media (max-width: 360px) {
-  .tabs { display: none; }
-  .stats-row { grid-template-columns: 1fr 1fr; }
-  .hd-btns .hbtn:last-child { display: none; }
+  .logo { font-size: 12px; }
+  .hbtn { padding: 0 5px; height: 26px; font-size: 10px; }
+  .hbtn-menu { width: 30px; height: 30px; font-size: 16px; }
+  .header-menu { right: 8px; min-width: 140px; }
+  .menu-item { padding: 10px 12px; font-size: 12px; }
 }
 
 /* Large desktop */
@@ -956,6 +1048,14 @@ input, textarea, select { font-family: var(--font); }
   .app { padding: 20px; }
   .stats-row { grid-template-columns: repeat(4, 1fr); }
   .syl-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Desktop & Tablet: Show all buttons, hide hamburger */
+@media (min-width: 601px) {
+  .hbtn#themeBtn { display: inline-block; }
+  .hbtn#resetBtn { display: inline-block; }
+  .hbtn-menu { display: none; }
+  .header-menu { display: none !important; }
 }
 
 /* Today banner */
