@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>UPSC Study Planner — Manage</title>
+  <link rel="stylesheet" href="upsc-planner-styles.css">
+</head>
+<body>
+
+<!-- ════════ HEADER ════════ -->
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">IAS<span>Plan</span></div>
+    <div class="tabs">
+      <button class="tab" onclick="window.location='upsc-planner-final.html'">📅 Daily</button>
+      <button class="tab" onclick="window.location='upsc-planner-final.html'">📚 Syllabus</button>
+      <button class="tab active">⚙️ Manage</button>
+    </div>
+    <div class="hdr-btns">
+      <button class="hbtn" id="gdriveBtn" onclick="initGoogleAuth()">☁️ Cloud</button>
+      <button class="hbtn" id="themeBtn">🌙</button>
+      <button class="hbtn danger" id="resetBtn">↺ Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ APP ════════ -->
+<div class="app">
+  <!-- MANAGE VIEW -->
+  <div class="view active" id="view-manage">
+    <div class="mgmt-grid">
+      <div class="mpanel">
+        <div class="mpanel-hd">Subjects <button class="hbtn" style="height:28px;padding:0 10px;font-size:12px;background:var(--blue);color:#fff;border-color:var(--blue)" onclick="openSubjModal(null)">+ Add</button></div>
+        <div id="subjListEl"></div>
+      </div>
+      <div class="mpanel">
+        <div class="mpanel-hd">
+          Days
+          <div style="display:flex;gap:6px">
+            <button class="hbtn" style="height:28px;padding:0 10px;font-size:12px;background:var(--blue);color:#fff;border-color:var(--blue)" onclick="openDayModal(null)">+ Day</button>
+            <button class="hbtn" style="height:28px;padding:0 10px;font-size:12px" onclick="openBulkModal()">⚡ Bulk</button>
+          </div>
+        </div>
+        <div class="de-toolbar">
+          <input type="text" id="dSearch" placeholder="Search days…" oninput="renderDayListM()">
+          <select id="dFilter" onchange="renderDayListM()"><option value="">All Subjects</option></select>
+        </div>
+        <div style="max-height:500px;overflow-y:auto" id="dayListEl"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ MODALS ════════ -->
+
+<!-- Subject Modal -->
+<div class="overlay" id="subjOverlay" onclick="if(event.target===this)closeModal('subjOverlay')">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-hd">
+      <div class="modal-title" id="smTitle">Add Subject</div>
+      <button class="modal-close" onclick="closeModal('subjOverlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="mfrow">
+        <div class="mfg"><label>Name</label><input id="smName" placeholder="e.g. Polity"></div>
+        <div class="mfg"><label>Default Hours / Day</label><input id="smHrs" type="number" min="0.5" max="8" step="0.5" value="3"></div>
+      </div>
+      <div class="mfrow">
+        <div class="mfg"><label>Color</label><div class="color-row" id="colorRow"></div></div>
+      </div>
+      <div class="mfrow">
+        <div class="mfg"><label>Icon</label><div class="icon-row" id="iconRow"></div></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="hbtn" onclick="closeModal('subjOverlay')">Cancel</button>
+      <button class="hbtn" style="background:var(--blue);color:#fff;border-color:var(--blue)" onclick="saveSubject()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Day Modal -->
+<div class="overlay" id="dayOverlay" onclick="if(event.target===this)closeModal('dayOverlay')">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-hd">
+      <div class="modal-title" id="dmTitle">Add Day</div>
+      <button class="modal-close" onclick="closeModal('dayOverlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="mfrow">
+        <div class="mfg"><label>Day Title</label><input id="dmName" placeholder="e.g. Heavy Polity + CSAT"></div>
+        <div class="mfg"><label>Date Override</label><input id="dmDate" type="date"></div>
+      </div>
+      <div class="mfrow">
+        <div class="mfg"><label>Daily Target (hrs)</label><input id="dmTarget" type="number" min="7" max="14" step="0.5" value="9"></div>
+      </div>
+      <div class="divider"></div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px">Subject Blocks</div>
+      <div id="dmBlocksEl"></div>
+      <button class="add-block-btn" style="width:100%;margin-top:4px;text-align:center" onclick="addModalBlock()">+ Add Subject Block</button>
+    </div>
+    <div class="modal-footer">
+      <button class="hbtn" onclick="closeModal('dayOverlay')">Cancel</button>
+      <button class="hbtn" style="background:var(--blue);color:#fff;border-color:var(--blue)" onclick="saveDay()">Save Day</button>
+    </div>
+  </div>
+</div>
+
+<!-- Block Picker Modal -->
+<div class="overlay" id="bpOverlay" onclick="if(event.target===this)closeModal('bpOverlay')">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-hd">
+      <div class="modal-title">Add Subject</div>
+      <button class="modal-close" onclick="closeModal('bpOverlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="subj-picker" id="bpList"></div>
+      <div class="mfrow" style="margin-top:14px">
+        <div class="mfg"><label>Target Hours</label><input id="bpHrs" type="number" min="0.5" max="12" step="0.5" value="2"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="hbtn" onclick="closeModal('bpOverlay')">Cancel</button>
+      <button class="hbtn" style="background:var(--blue);color:#fff;border-color:var(--blue)" onclick="confirmAddBlock()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Modal -->
+<div class="overlay" id="bulkOverlay" onclick="if(event.target===this)closeModal('bulkOverlay')">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-hd">
+      <div class="modal-title">⚡ Bulk Add Days</div>
+      <button class="modal-close" onclick="closeModal('bulkOverlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--ink3);margin-bottom:12px;line-height:1.6">
+        One day per line:<br>
+        <code style="background:var(--bg2);padding:2px 6px;border-radius:4px">Day Title | Subject:hrs | Subject:hrs</code><br>
+        Sub-topics: next line starting with two spaces and <code>-</code>
+      </p>
+      <div class="mfg">
+        <label>Input</label>
+        <textarea id="bulkInput" rows="10" placeholder="Polity + CSAT Day | Polity:3 | CSAT:2&#10;  - Fundamental Rights&#10;  - Art 19–22 Freedom&#10;Economy Focus | Economy:4 | Revision:1.5&#10;  - GDP and Inflation"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="hbtn" onclick="closeModal('bulkOverlay')">Cancel</button>
+      <button class="hbtn" style="background:var(--blue);color:#fff;border-color:var(--blue)" onclick="saveBulk()">Add Days</button>
+    </div>
+  </div>
+</div>
+
+<script>
+isManagePage = true;
+</script>
+<script src="upsc-planner-script.js"></script>
+<script>
+// On manage page load, render the manage view
+document.addEventListener('DOMContentLoaded', () => {
+  load();
+  applyTheme();
+  renderManage();
+  // Set up theme and reset button listeners
+  document.getElementById('themeBtn').addEventListener('click', () => {
+    conf.dark = !conf.dark;
+    sc();
+    applyTheme();
+  });
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if (!confirm('Reset all progress? Your plan is kept.')) return;
+    stopAllTimers();
+    prog = {};
+    timers = {};
+    sp();
+    renderManage();
+  });
+});
+</script>
+<script src="upsc-planner-gdrive.js"></script>
+</body>
+</html>
