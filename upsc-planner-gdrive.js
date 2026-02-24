@@ -17,18 +17,41 @@ let gdriveClientId = null;
 async function loadConfig() {
   // Try Vercel API first
   try {
+    console.log('📡 Fetching config from /api/config...');
     const response = await fetch('/api/config');
     if (response.ok) {
       const data = await response.json();
+      console.log('📦 API Response:', data);
       if (data.GOOGLE_CLIENT_ID && data.GOOGLE_CLIENT_ID !== 'NOT_SET') {
         gdriveClientId = data.GOOGLE_CLIENT_ID;
         console.log('✓ Config loaded from Vercel API');
         return true;
+      } else {
+        console.warn('⚠️ API returned NOT_SET - env var not configured on Vercel');
       }
+    } else {
+      console.warn('⚠️ API returned status:', response.status);
     }
   } catch (err) {
     // API not available (local development) - fall back to config.js
-    console.log('ℹ Vercel API not available, using config.js');
+    console.log('ℹ Vercel API not available (expected in local dev):', err.message);
+  }
+
+  // Try loading from public/config.json (manual upload to Vercel public folder)
+  try {
+    console.log('📡 Fetching config from /config.json...');
+    const response = await fetch('/config.json');
+    if (response.ok) {
+      const data = await response.json();
+      console.log('📦 JSON Response:', data);
+      if (data.GOOGLE_CLIENT_ID && data.GOOGLE_CLIENT_ID !== 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com') {
+        gdriveClientId = data.GOOGLE_CLIENT_ID;
+        console.log('✓ Config loaded from /config.json');
+        return true;
+      }
+    }
+  } catch (err) {
+    console.log('ℹ config.json not found (expected if using env var)');
   }
 
   // Fall back to config.js (local development)
@@ -48,6 +71,7 @@ async function loadConfig() {
     return true;
   }
 
+  console.warn('✗ No Client ID found in any source');
   return false;
 }
 
